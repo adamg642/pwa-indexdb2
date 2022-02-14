@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA</title>
+    <link rel="stylesheet" href="src/master.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+
+    DB<input type='text' value='myFile' id='txtDB'>
+    Version <input type='text' value='1' id='txtVersion'>
+    <button id='btnCreateDB'>Create DB (with myFile 1.)</button>
+    <button id='btnAddFiles' onclick="addFile()">Add file 2.</button>
+    <button onclick="openDB()">Open 3.</button>
+    <button onclick="fetchSWAPI()">fetch SWAPI</button>
+    <button onclick="deleteIndexDB()"> Delete IndexDB</button>
+
+    <p id="console">CONSOLE</p>
+
+    <video muted id="video" controls width="550">
+
+
+        <source id="videoSource" type="video/mp4">
+
+        Sorry, your browser doesn't support embedded videos.
+    </video>
+
+    <script>
+        function deleteIndexDB() {
+            console.log('delete')
+            console.log(db,'dbv')
+            alert('delete')
+            db.close();
+            indexedDB.deleteDatabase('myFile')
+        }
+        function fetchSWAPI() {
+            var myRequest = new Request('https://swapi.dev/api/people/1/');
+
+            fetch(myRequest)
+                .then(response => response.blob())
+                .then(response => {
+                    console.log(response, 'reeeeeeees')
+                    const url = window.URL.createObjectURL(response)
+                    document.getElementById('videoSource').setAttribute('src', url)
+
+                    setTimeout(() => {
+                        console.log('settimeout')
+                        document.getElementById('video').load()
+                        document.getElementById('video').play()
+
+                    }, 3000)
+                    console.log(response, 'res')
+                })
+                .catch((error) => {
+                    console.error(error);
+                });
+        }
+
+        let db = null
+        const btnCreateDB = document.getElementById("btnCreateDB")
+        btnCreateDB.addEventListener("click", createDB)
+
+        function addFile() {
+            console.log('add FILE')
+
+            var myRequest = new Request('./images/BigBangTheoryBest.mp4');
+
+            fetch(myRequest)
+                .then(response => response.blob())
+                .then(function (myBlob) {
+                    console.log(myBlob, 'myBlob')
+                    const note = {
+                        name: "video",
+                        blob: myBlob
+                    }
+
+
+                    const tx = db.transaction("myFile", "readwrite")
+                    tx.onerror = e => alert(` Error! ${e.target.error}  `)
+                    const pNotes = tx.objectStore("myFile")
+                   const req = pNotes.add(note)
+                   req.onsuccess = (e) => {
+                    console.log('request success',e)
+                   }
+
+                   req.onerror = (e) => {
+                    console.log('request err',e)
+                   }
+
+
+                });
+
+
+        }
+
+        function createDB() {
+
+            const dbName = document.getElementById("txtDB").value
+            const dbVersion = document.getElementById("txtVersion").value
+
+            const request = indexedDB.open(dbName, dbVersion)
+
+
+
+            //on upgrade needed
+            request.onupgradeneeded = e => {
+                db = e.target.result
+                const myFiles = db.createObjectStore("myFile", { keyPath: "name" })
+
+                alert(`upgrade is called database name: ${db.name} version : ${db.version}`)
+
+            }
+            //on success 
+            request.onsuccess = e => {
+                db = e.target.result
+                alert(`success is called database name: ${db.name} version : ${db.version}`)
+            }
+            //on error
+            request.onerror = e => {
+                alert(`error: ${e.target.error} was found `)
+
+            }
+
+
+        }
+
+        function openDB() {
+            console.log('opppeeen')
+            // Let us open our database
+            var DBOpenRequest = window.indexedDB.open("myFile");
+
+            DBOpenRequest.onsuccess = function (event) {
+                console.log('oopened')
+                // store the result of opening the database in the db variable.
+                // This is used a lot below
+                db = DBOpenRequest.result;
+
+                // Run the getData() function to get the data from the database
+                getFile();
+            };
+
+            DBOpenRequest.onerror = function (event) {
+                console.log(event, 'errr')
+            }
+
+        }
+
+        function getFile() {
+            const dbName = 'myFile'
+            const key = "video"
+            // open a read/write db transaction, ready for retrieving the data
+            var transaction = db.transaction([dbName], "readwrite");
+
+            // report on the success of the transaction completing, when everything is done
+            transaction.oncomplete = function (event) {
+                console.log('opensucc')
+            };
+
+            transaction.onerror = function (event) {
+                console.log('openerr' + event)
+            };
+
+            // create an object store on the transaction
+            var objectStore = transaction.objectStore(dbName);
+
+            // Make a request to get a record by key from the object store
+            var objectStoreRequest = objectStore.get(key);
+
+            objectStoreRequest.onsuccess = function (event) {
+                // report the success of our request
+                console.log('objectStore req success')
+
+                var myRecord = objectStoreRequest.result;
+                console.log(myRecord, 'myRecord')
+                const url = window.URL.createObjectURL(myRecord.blob)
+                document.getElementById('videoSource').setAttribute('src', url)
+                setTimeout(() => {
+                    console.log('settimeout')
+                    document.getElementById('video').load()
+                    document.getElementById('video').play()
+
+                }, 3000)
+
+
+            };
+
+        };
+
+    </script>
+    <script src="src/index.js"></script>
+</body>
+
+</html>
